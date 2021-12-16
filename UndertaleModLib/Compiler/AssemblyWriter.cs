@@ -1055,7 +1055,7 @@ namespace UndertaleModLib.Compiler
                 cw.Emit(op, type, DataType.Variable);
                 
                 // Store back, using duplicate reference if necessary
-                AssembleStoreVariable(cw, s.Children[0], DataType.Variable, !isSingle);
+                AssembleStoreVariable(cw, s.Children[0], DataType.Variable, !isSingle, true);
             }
 
             private static void AssemblePostOrPre(CodeWriter cw, Parser.Statement s, bool isPost, bool isExpression)
@@ -1235,7 +1235,7 @@ namespace UndertaleModLib.Compiler
                             Patch startPatch = Patch.StartHere(cw);
                             Patch endPatch = Patch.Start();
                             endPatch.Add(cw.Emit(Opcode.B));
-                            cw.loopContexts.Push(new LoopContext(endPatch, startPatch));
+                            cw.loopContexts.Push(new LoopContext(endPatch, startPatch)); // TODO: this isn't a loop context
                             AssembleStatement(cw, e.Children[1]); // body
                             AssembleExit(cw);
                             cw.loopContexts.Pop();
@@ -1644,15 +1644,18 @@ namespace UndertaleModLib.Compiler
                             // Special array access- instance type needs to be pushed beforehand
                             cw.Emit(Opcode.PushI, DataType.Int16).Value = (short)e.Children[0].ID;
                             // Pushing array (incl. 2D) but not popping
-                            AssembleArrayPush(cw, e.Children[0], true);
+                            AssembleArrayPush(cw, e.Children[0], !duplicate);
                             if (duplicate)
                             {
                                 if (useLongDupForArray)
                                     cw.Emit(Opcode.Dup, DataType.Int64).Extra = 0;
                                 else
                                 {
-                                    if (useLongDupForArray)
-                                        cw.Emit(Opcode.Dup, DataType.Int64).Extra = 0;
+                                    if (cw.compileContext.Data.GMS2_3 && e.Children[0].Children.Count != 1)
+                                    {
+                                        cw.Emit(Opcode.Dup, DataType.Int32).Extra = 4;
+                                        cw.Emit(Opcode.Break, DataType.Int16).Value = (short)-8; // savearef
+                                    }
                                     else
                                         cw.Emit(Opcode.Dup, DataType.Int32).Extra = 1;
                                 }
@@ -1662,7 +1665,7 @@ namespace UndertaleModLib.Compiler
                             {
                                 cw.Emit(Opcode.Break, DataType.Int16).Value = (short)-2; // pushaf
                             }
-                            if (!cw.compileContext.Data.GMS2_3 || e.Children[0].Children.Count == 1)
+                            else
                             {
                                 cw.varPatches.Add(new VariablePatch()
                                 {
@@ -1887,14 +1890,7 @@ namespace UndertaleModLib.Compiler
                         cw.typeStack.Push(DataType.Int32);
                     }
 
-                    if (cw.compileContext.Data.GMS2_3)
-                    {
-                        if (arraypushaf)
-                            cw.Emit(Opcode.Break, DataType.Int16).Value = (short)-2; // pushaf
-                        else
-                            cw.Emit(Opcode.Break, DataType.Int16).Value = (short)-3; // popaf
-                    }
-                    else
+                    if (!cw.compileContext.Data.GMS2_3)
                     {
                         cw.Emit(Opcode.Break, DataType.Int16).Value = (short)-1; // chkindex
                         cw.Emit(Opcode.Add, DataType.Int32, DataType.Int32);
@@ -1916,7 +1912,7 @@ namespace UndertaleModLib.Compiler
                 };
             }
 
-            private static void AssembleStoreVariable(CodeWriter cw, Parser.Statement s, DataType typeToStore, bool skip = false)
+            private static void AssembleStoreVariable(CodeWriter cw, Parser.Statement s, DataType typeToStore, bool skip = false, bool duplicate = false)
             {
                 if (s.Kind == Parser.Statement.StatementKind.ExprVariableRef)
                 {
@@ -1932,15 +1928,26 @@ namespace UndertaleModLib.Compiler
                             if (!skip)
                             {
                                 // Convert to variable in 2.3
-                                if (cw.compileContext.Data.GMS2_3 && typeToStore == DataType.Int32)
+                                if (cw.compileContext.Data.GMS2_3 && typeToStore != DataType.Variable)
                                 {
-                                    cw.Emit(Opcode.Conv, DataType.Int32, DataType.Variable);
+                                    cw.Emit(Opcode.Conv, typeToStore, DataType.Variable);
                                     typeToStore = DataType.Variable;
                                 }
                                 cw.Emit(Opcode.PushI, DataType.Int16).Value = (short)s.Children[0].ID;
                                 AssembleArrayPush(cw, s.Children[0]);
                             }
-                            if (!cw.compileContext.Data.GMS2_3 || s.Children[0].Children.Count == 1)
+                            if (cw.compileContext.Data.GMS2_3 && s.Children[0].Children.Count != 1)
+                            {
+                                if (duplicate)
+                                {
+                                    cw.Emit(Opcode.Break, DataType.Int16).Value = (short)-9; // restorearef
+                                    UndertaleInstruction dup = cw.Emit(Opcode.Dup, DataType.Int32);
+                                    dup.Extra = 4;
+                                    dup.ComparisonKind = (ComparisonType)168;
+                                }
+                                cw.Emit(Opcode.Break, DataType.Int16).Value = (short)-3; // popaf
+                            }
+                            else
                             {
                                 cw.varPatches.Add(new VariablePatch()
                                 {
