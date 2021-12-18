@@ -419,7 +419,8 @@ namespace UndertaleModLib.Compiler
                 public enum ContextKind
                 {
                     Switch,
-                    With
+                    With,
+                    Script
                 }
 
                 public ContextKind Kind;
@@ -435,6 +436,13 @@ namespace UndertaleModLib.Compiler
                     Break = @break;
                     Continue = @continue;
                     TypeToPop = typeToPop;
+                }
+
+                public OtherContext(Patch @break, Patch @continue, bool isAScript)
+                {
+                    Kind = ContextKind.Script;
+                    Break = @break;
+                    Continue = @continue;
                 }
 
                 public OtherContext(Patch @break, Patch @continue)
@@ -529,9 +537,12 @@ namespace UndertaleModLib.Compiler
                         break;
                     case Parser.Statement.StatementKind.Block:
                         {
+                            int countOff = -1;
+                            if (cw.otherContexts.Count > 0 && cw.otherContexts.Peek().Kind == OtherContext.ContextKind.Script)
+                                countOff = s.Children.Count;
                             for (int i = 0; i < s.Children.Count; i++)
                             {
-                                AssembleStatement(cw, s.Children[i], s.Children.Count - i);
+                                AssembleStatement(cw, s.Children[i], countOff - i);
                             }
                         }
                         break;
@@ -871,7 +882,7 @@ namespace UndertaleModLib.Compiler
                             Patch popEnvPatch = Patch.Start();
                             
                             // Hacky override for @@Other@@ usage- will likely expand to whatever other cases it turns out the compiler uses.
-                            // (instance_exists appears to be one of them, but that might actually be an overzealous decompiler conversion.
+                            // (instance_exists appears to be one of them, but that might actually be an overzealous decompiler conversion.)
                             if (cw.compileContext.Data.GMS2_3 &&
                                (s.Children[0].Kind == Parser.Statement.StatementKind.ExprConstant &&
                                (InstanceType)s.Children[0].Constant.valueNumber == InstanceType.Other))
@@ -1016,8 +1027,9 @@ namespace UndertaleModLib.Compiler
                         } else
                         {
                             // Returns nothing, basically the same as exit
-                            if (!cw.compileContext.Data.GMS2_3 || remaining != 1)
-                                AssembleExit(cw);
+                            if (cw.compileContext.Data.GMS2_3 && remaining == 1)
+                                break;
+                            AssembleExit(cw);
                         }
                         break;
                     case Parser.Statement.StatementKind.Exit:
@@ -1235,10 +1247,10 @@ namespace UndertaleModLib.Compiler
                             Patch startPatch = Patch.StartHere(cw);
                             Patch endPatch = Patch.Start();
                             endPatch.Add(cw.Emit(Opcode.B));
-                            cw.loopContexts.Push(new LoopContext(endPatch, startPatch)); // TODO: this isn't a loop context
+                            cw.otherContexts.Push(new OtherContext(endPatch, startPatch, true));
                             AssembleStatement(cw, e.Children[1]); // body
                             AssembleExit(cw);
-                            cw.loopContexts.Pop();
+                            cw.otherContexts.Pop();
                             endPatch.Finish(cw);
 
                             cw.funcPatches.Add(new FunctionPatch()
