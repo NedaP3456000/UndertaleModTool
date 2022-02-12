@@ -1370,13 +1370,15 @@ namespace UndertaleModLib.Compiler
                 Statement result = new Statement(Statement.StatementKind.ExprSingleVariable, s.Token);
                 result.ID = s.ID;
                 // Check for array
-                if (remainingStageOne.Count > 0 && IsNextToken(
+                bool array = false; // hack because you can't else if a while
+                while (remainingStageOne.Count > 0 && IsNextToken(
                     TokenKind.OpenArray,
                     TokenKind.OpenArrayBaseArray,
                     TokenKind.OpenArrayGrid,
                     TokenKind.OpenArrayList,
                     TokenKind.OpenArrayMap))
                 {
+                    array = true;
                     Lexer.Token tok = remainingStageOne.Dequeue().Token;
                     TokenKind t = tok.Kind;
 
@@ -1411,7 +1413,7 @@ namespace UndertaleModLib.Compiler
 
                     if (EnsureTokenKind(TokenKind.CloseArray) == null) return null;
                 }
-                else if (context.BuiltInList.GlobalArray.TryGetValue(result.Text, out _) || context.BuiltInList.InstanceLimitedEvent.TryGetValue(result.Text, out _))
+                if (!array && (context.BuiltInList.GlobalArray.TryGetValue(result.Text, out _) || context.BuiltInList.InstanceLimitedEvent.TryGetValue(result.Text, out _)))
                 {
                     // The compiler apparently does this
                     // I think this makes some undefined value for whatever reason
