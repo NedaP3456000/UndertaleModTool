@@ -60,7 +60,7 @@ public class UndertaleEmbeddedTexture : UndertaleNamedResource, IDisposable
     public void Unserialize(UndertaleReader reader)
     {
         Scaled = reader.ReadUInt32();
-        if (reader.undertaleData.GeneralInfo.Major >= 2)
+        if (reader.undertaleData.IsGameMaker2())
             GeneratedMips = reader.ReadUInt32();
         if (reader.undertaleData.IsVersionAtLeast(2022, 3))
             TextureBlockSize = reader.ReadUInt32();
