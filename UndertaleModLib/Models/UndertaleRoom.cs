@@ -971,7 +971,7 @@ public class UndertaleRoom : UndertaleNamedResource, INotifyPropertyChanged, IDi
             writer.WriteUndertaleObject(_creationCode);
             writer.Write(ScaleX);
             writer.Write(ScaleY);
-            if (writer.undertaleData.GMS2_2_2_302)
+            if (writer.undertaleData.IsVersionAtLeast(2, 2, 2, 302))
             {
                 writer.Write(ImageSpeed);
                 writer.Write(ImageIndex);
@@ -1000,7 +1000,8 @@ public class UndertaleRoom : UndertaleNamedResource, INotifyPropertyChanged, IDi
             ScaleY = reader.ReadSingle();
             if (length == 48)
             {
-                reader.undertaleData.GMS2_2_2_302 = true;
+                if (!reader.undertaleData.IsVersionAtLeast(2, 2, 2, 302))
+                    reader.undertaleData.GeneralInfo.GMS2Version = UndertaleGeneralInfo.GMSVersions.GMS2_2_2_302;
                 ImageSpeed = reader.ReadSingle();
                 ImageIndex = reader.ReadInt32();
             }
@@ -1326,7 +1327,7 @@ public class UndertaleRoom : UndertaleNamedResource, INotifyPropertyChanged, IDi
             writer.Write(VSpeed);
             writer.Write(IsVisible);
 
-            if (writer.undertaleData.GMS2022_1)
+            if (writer.undertaleData.IsVersionAtLeast(2022, 1))
             {
                 writer.Write(EffectEnabled);
                 writer.WriteUndertaleString(EffectType);
@@ -1357,7 +1358,7 @@ public class UndertaleRoom : UndertaleNamedResource, INotifyPropertyChanged, IDi
             VSpeed = reader.ReadSingle();
             IsVisible = reader.ReadBoolean();
 
-            if (reader.undertaleData.GMS2022_1)
+            if (reader.undertaleData.IsVersionAtLeast(2022, 1))
             {
                 EffectEnabled = reader.ReadBoolean();
                 EffectType = reader.ReadUndertaleString();
@@ -1624,18 +1625,18 @@ public class UndertaleRoom : UndertaleNamedResource, INotifyPropertyChanged, IDi
             {
                 writer.WriteUndertaleObjectPointer(LegacyTiles);
                 writer.WriteUndertaleObjectPointer(Sprites);
-                if (writer.undertaleData.GMS2_3)
+                if (writer.undertaleData.IsVersionAtLeast(2, 3))
                 {
                     writer.WriteUndertaleObjectPointer(Sequences);
-                    if (!writer.undertaleData.GMS2_3_2)
+                    if (!writer.undertaleData.IsVersionAtLeast(2, 3, 2))
                         writer.WriteUndertaleObjectPointer(NineSlices);
                 }
                 writer.WriteUndertaleObject(LegacyTiles);
                 writer.WriteUndertaleObject(Sprites);
-                if (writer.undertaleData.GMS2_3)
+                if (writer.undertaleData.IsVersionAtLeast(2, 3))
                 {
                     writer.WriteUndertaleObject(Sequences);
-                    if (!writer.undertaleData.GMS2_3_2)
+                    if (!writer.undertaleData.IsVersionAtLeast(2, 3, 2))
                         writer.WriteUndertaleObject(NineSlices);
                 }
             }
@@ -1648,7 +1649,7 @@ public class UndertaleRoom : UndertaleNamedResource, INotifyPropertyChanged, IDi
                 if (reader.GMS2_3)
                 {
                     Sequences = reader.ReadUndertaleObjectPointer<UndertalePointerList<SequenceInstance>>();
-                    if (!reader.undertaleData.GMS2_3_2)
+                    if (!reader.undertaleData.IsVersionAtLeast(2, 3, 2))
                         NineSlices = reader.ReadUndertaleObjectPointer<UndertalePointerList<SpriteInstance>>();
                 }
                 reader.ReadUndertaleObject(LegacyTiles);
@@ -1656,7 +1657,7 @@ public class UndertaleRoom : UndertaleNamedResource, INotifyPropertyChanged, IDi
                 if (reader.GMS2_3)
                 {
                     reader.ReadUndertaleObject(Sequences);
-                    if (!reader.undertaleData.GMS2_3_2)
+                    if (!reader.undertaleData.IsVersionAtLeast(2, 3, 2))
                         reader.ReadUndertaleObject(NineSlices);
                 }
             }
@@ -1703,7 +1704,7 @@ public class UndertaleRoom : UndertaleNamedResource, INotifyPropertyChanged, IDi
             /// <inheritdoc />
             public void Serialize(UndertaleWriter writer)
             {
-                if (writer.undertaleData.GMS2022_1)
+                if (writer.undertaleData.IsVersionAtLeast(2022, 1))
                     return;
                 writer.WriteUndertaleString(EffectType);
                 writer.WriteUndertaleObject(Properties);
@@ -1712,7 +1713,7 @@ public class UndertaleRoom : UndertaleNamedResource, INotifyPropertyChanged, IDi
             /// <inheritdoc />
             public void Unserialize(UndertaleReader reader)
             {
-                if (reader.undertaleData.GMS2022_1)
+                if (reader.undertaleData.IsVersionAtLeast(2022, 1))
                     return;
                 EffectType = reader.ReadUndertaleString();
                 Properties = reader.ReadUndertaleObject<UndertaleSimpleList<EffectProperty>>();
