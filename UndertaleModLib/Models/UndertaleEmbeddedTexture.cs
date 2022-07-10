@@ -49,9 +49,9 @@ public class UndertaleEmbeddedTexture : UndertaleNamedResource, IDisposable
     public void Serialize(UndertaleWriter writer)
     {
         writer.Write(Scaled);
-        if (writer.undertaleData.GeneralInfo.Major >= 2)
+        if (writer.undertaleData.IsGameMaker2())
             writer.Write(GeneratedMips);
-        if (writer.undertaleData.GM2022_3)
+        if (writer.undertaleData.IsVersionAtLeast(2022, 3))
             writer.Write(TextureBlockSize);
         writer.WriteUndertaleObjectPointer(TextureData);
     }
@@ -62,7 +62,7 @@ public class UndertaleEmbeddedTexture : UndertaleNamedResource, IDisposable
         Scaled = reader.ReadUInt32();
         if (reader.undertaleData.GeneralInfo.Major >= 2)
             GeneratedMips = reader.ReadUInt32();
-        if (reader.undertaleData.GM2022_3)
+        if (reader.undertaleData.IsVersionAtLeast(2022, 3))
             TextureBlockSize = reader.ReadUInt32();
         TextureData = reader.ReadUndertaleObjectPointer<TexData>();
     }
@@ -203,7 +203,7 @@ public class UndertaleEmbeddedTexture : UndertaleNamedResource, IDisposable
                     using Bitmap bmp = TextureWorker.GetImageFromByteArray(TextureBlob);
                     writer.Write((short)bmp.Width);
                     writer.Write((short)bmp.Height);
-                    byte[] data = QoiConverter.GetArrayFromImage(bmp, writer.undertaleData.GM2022_3 ? 0 : 4);
+                    byte[] data = QoiConverter.GetArrayFromImage(bmp, writer.undertaleData.IsVersionAtLeast(2022, 3) ? 0 : 4);
                     using MemoryStream input = new MemoryStream(data);
                     if (sharedStream.Length != 0)
                         sharedStream.Seek(0, SeekOrigin.Begin);
@@ -216,7 +216,7 @@ public class UndertaleEmbeddedTexture : UndertaleNamedResource, IDisposable
                 {
                     // Encode the PNG data back to QOI
                     using Bitmap bmp = TextureWorker.GetImageFromByteArray(TextureBlob);
-                    writer.Write(QoiConverter.GetSpanFromImage(bmp, writer.undertaleData.GM2022_3 ? 0 : 4));
+                    writer.Write(QoiConverter.GetSpanFromImage(bmp, writer.undertaleData.IsVersionAtLeast(2022, 3) ? 0 : 4));
                 }
             }
             else

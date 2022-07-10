@@ -663,7 +663,7 @@ namespace UndertaleModTool
 
             code.Replace(compileContext.ResultAssembly);
 
-            if (!mainWindow.Data.GMS2_3)
+            if (!mainWindow.Data.IsVersionAtLeast(2, 3))
             {
                 try
                 {
@@ -1058,12 +1058,12 @@ namespace UndertaleModTool
                     if (func)
                     {
                         val = null;
-                        if (!data.GMS2_3) // in GMS2.3 every custom "function" is in fact a member variable and scripts are never referenced directly
+                        if (!data.IsVersionAtLeast(2, 3)) // in GMS2.3 every custom "function" is in fact a member variable and scripts are never referenced directly
                             val = data.Scripts.ByName(m.Value);
                         if (val == null)
                         {
                             val = data.Functions.ByName(m.Value);
-                            if (data.GMS2_3)
+                            if (data.IsVersionAtLeast(2, 3))
                             {
                                 if (val != null)
                                 {
@@ -1093,7 +1093,7 @@ namespace UndertaleModTool
                     else
                     {
                         val = data.ByName(m.Value);
-                        if (data.GMS2_3 & val is UndertaleScript)
+                        if (data.IsVersionAtLeast(2, 3) & val is UndertaleScript)
                             val = null; // in GMS2.3 scripts are never referenced directly
                     }
                     if (val == null)
