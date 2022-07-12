@@ -98,7 +98,7 @@ namespace UndertaleModTool
                     // says, this isn't working so it's just
                     // hardcoded in the XML for now
                     /*
-                    if(mainWindow.Data.GMS2_3)
+                    if(mainWindow.Data.IsVersionAtLeast(2, 3))
                     {
                         HighlightingColor color = null;
                         foreach (var rule in def.MainRuleSet.Rules)

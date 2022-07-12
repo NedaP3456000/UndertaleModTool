@@ -70,7 +70,7 @@ Data.TexturePageItems.Add(texturePageItem);
 
 font.Texture = texturePageItem;
 
-if (Data.GMS2_3)
+if (Data.IsVersionAtLeast(2, 3))
     font.EmSizeIsFloat = true; // forcbliy save as float lmao
 
 font.Glyphs.Clear();
