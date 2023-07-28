@@ -439,7 +439,7 @@ namespace UndertaleModLib.Compiler
                     context.LocalVars["arguments"] = "arguments";
                 context.GlobalVars.Clear();
                 context.Enums.Clear();
-                context.LocalArgs.Clear();
+                //context.LocalArgs.Clear();
                 hasError = false;
 
                 // Ensuring an EOF exists
@@ -674,13 +674,14 @@ namespace UndertaleModLib.Compiler
 
                 EnsureTokenKind(TokenKind.OpenParen);
                 var i = 0;
-                Dictionary<string, int> argsDict = new();
+                //Dictionary<string, int> argsDict = new();
                 while (remainingStageOne.Count > 0 && !hasError && !IsNextToken(TokenKind.EOF, TokenKind.CloseParen))
                 {
                     var token = EnsureTokenKind(TokenKind.ProcVariable);
                     if (token == null)
                         return null;
-                    argsDict.Add(token.Text, i);
+                    //argsDict.Add(token.Text, i);
+                    args.Children.Add(new Statement(Statement.StatementKind.Token, token.Text));
                     i++;
                     if (!IsNextTokenDiscard(TokenKind.Comma))
                     {
@@ -696,7 +697,7 @@ namespace UndertaleModLib.Compiler
                 if (EnsureTokenKind(TokenKind.CloseParen) == null) return null;
 
                 result.Children.Add(ParseStatement(context)); // most likely parses the body.
-                context.LocalArgs.Add(result, argsDict);
+                //context.LocalArgs.Add(result, argsDict);
 
                 if (expressionMode)
                     return result;

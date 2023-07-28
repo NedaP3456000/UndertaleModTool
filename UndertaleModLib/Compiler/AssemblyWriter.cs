@@ -28,7 +28,7 @@ namespace UndertaleModLib.Compiler
                 public List<VariablePatch> varPatches = new List<VariablePatch>();
                 public List<FunctionPatch> funcPatches = new List<FunctionPatch>();
                 public List<StringPatch> stringPatches = new List<StringPatch>();
-                public Parser.Statement currentFunctionContext = null;
+                public List<string> currentArgsNames = new List<string>();
                 public CodeWriter(CompileContext context)
                 {
                     compileContext = context;
@@ -1301,10 +1301,17 @@ namespace UndertaleModLib.Compiler
                                 });
                             }
                             cw.loopContexts.Push(new LoopContext(endPatch, startPatch));
-                            var oldFuncContext = cw.currentFunctionContext;
-                            cw.currentFunctionContext = e;
+
+                            List<string> argsList = new();
+                            foreach (var arg in e.Children[0].Children)
+                            {
+                                argsList.Add(arg.Text);
+                            }
+
+                            var oldArgsNames = cw.currentArgsNames;
+                            cw.currentArgsNames = argsList;
                             AssembleStatement(cw, e.Children[1]); // body
-                            cw.currentFunctionContext = oldFuncContext;
+                            cw.currentArgsNames = oldArgsNames;
                             AssembleExit(cw);
                             cw.loopContexts.Pop();
                             endPatch.Finish(cw);
@@ -1780,8 +1787,16 @@ namespace UndertaleModLib.Compiler
                         switch (id)
                         {
                             case -1:
-                                if (cw.compileContext.BuiltInList.GlobalArray.ContainsKey(name) || cw.compileContext.BuiltInList.GlobalNotArray.ContainsKey(name) || (cw.currentFunctionContext != null && cw.compileContext.LocalArgs[cw.currentFunctionContext].ContainsKey(name)))
+                                if (cw.compileContext.BuiltInList.GlobalArray.ContainsKey(name)
+                                    || cw.compileContext.BuiltInList.GlobalNotArray.ContainsKey(name)
+                                    || cw.currentArgsNames.Contains(name))
                                 {
+                                    if (name.In(cw.currentArgsNames.ToArray()))
+                                    {
+                                        int index = cw.currentArgsNames.IndexOf(name);
+                                        name = "argument" + index;
+                                    }
+
                                     if (CompileContext.GMS2_3 &&
                                         (name.In(
                                             "argument0",  "argument1",  "argument2",  "argument3",
@@ -2078,13 +2093,23 @@ namespace UndertaleModLib.Compiler
                         int id = s.Children[0].ID;
                         if (id >= 100000)
                             id -= 100000;
-                        if (CompileContext.GMS2_3 && (cw.compileContext.BuiltInList.GlobalArray.ContainsKey(s.Children[0].Text) || cw.compileContext.BuiltInList.GlobalNotArray.ContainsKey(s.Children[0].Text)) || (cw.currentFunctionContext != null && cw.compileContext.LocalArgs[cw.currentFunctionContext].ContainsKey(s.Children[0].Text)))
+                        if (CompileContext.GMS2_3
+                            && (cw.compileContext.BuiltInList.GlobalArray.ContainsKey(s.Children[0].Text)
+                                || cw.compileContext.BuiltInList.GlobalNotArray.ContainsKey(s.Children[0].Text)
+                                || cw.currentArgsNames.Contains(s.Children[0].Text))
+                            )
                         {
-                            if ((s.Children[0].Text.In(
+                            if (s.Children[0].Text.In(cw.currentArgsNames.ToArray()))
+                            {
+                                int index = cw.currentArgsNames.IndexOf(s.Children[0].Text);
+                                s.Children[0].Text = "argument" + index;
+                            }
+
+                            if (s.Children[0].Text.In(
                                 "argument0", "argument1", "argument2", "argument3",
                                 "argument4", "argument5", "argument6", "argument7",
                                 "argument8", "argument9", "argument10", "argument11",
-                                "argument12", "argument13", "argument14", "argument15")))
+                                "argument12", "argument13", "argument14", "argument15"))
                             {
                                 cw.varPatches.Add(new VariablePatch()
                                 {
