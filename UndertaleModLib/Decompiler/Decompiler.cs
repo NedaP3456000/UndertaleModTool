@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UndertaleModLib.Compiler;
 using UndertaleModLib.Models;
 using UndertaleModLib.Util;
 using static UndertaleModLib.Decompiler.Decompiler;
@@ -992,15 +993,65 @@ namespace UndertaleModLib.Decompiler
                 return this;
             }
 
-            public override string ToString(DecompileContext context)
+            private string AddParensIfNeeded(Expression argument, DecompileContext context)
             {
+                string arg = argument.ToString(context);
+                bool needsParens;
+                if (arg.Contains(' ', StringComparison.InvariantCulture) && arg.Substring(0, 1) != "(")
+                    needsParens = true;
+                else
+                    needsParens = false;
+
+
+                if (argument is ExpressionTwo argumentAsBinaryExpression)
+                {
+                    // First, no parentheses on this type
+                    arg = argumentAsBinaryExpression.ToStringNoParens(context);
+
+                    int myPriorityLevel = Opcode switch
+                    {
+                        UndertaleInstruction.Opcode.Mul or UndertaleInstruction.Opcode.Div => 2,
+                        UndertaleInstruction.Opcode.Add or UndertaleInstruction.Opcode.Sub => 1,
+                        _ => 0,
+                    };
+
+                    int argPriorityLevel = argumentAsBinaryExpression.Opcode switch
+                    {
+                        UndertaleInstruction.Opcode.Mul or UndertaleInstruction.Opcode.Div => 2,
+                        UndertaleInstruction.Opcode.Add or UndertaleInstruction.Opcode.Sub => 1,
+                        _ => 0,
+                    };
+
+                    // Suppose we have "argument1 opcode argument2", and are currently dealing with argument1
+                    // If the argument's opcode is more highly-prioritized than our own, such as it being multiplication
+                    // while we use addition, then no parentheses are required.
+                    // If the argument's opcode doesn't fall into typical math rules (that is, I don't know my full order of operations)
+                    // Assume it has lower priority and needs parentheses to clarify.
+                    // Parentheses are also not needed for operations of the same level, especially string concatenation.
+                    needsParens = (myPriorityLevel > argPriorityLevel);
+                    if (myPriorityLevel == 0)
+                        needsParens = true; // Better safe than sorry
+                }
+                return (needsParens ? String.Format("({0})", arg) : arg);
+            }
+
+            public string ToStringNoParens(DecompileContext context)
+            {
+                string arg1 = AddParensIfNeeded(Argument1, context);
+                string arg2 = AddParensIfNeeded(Argument2, context);
+
                 if (Opcode == UndertaleInstruction.Opcode.Or || Opcode == UndertaleInstruction.Opcode.And)
                 {
                     // If both arguments are a boolean type, this is a non-short-circuited logical condition
                     if (Type == UndertaleInstruction.DataType.Boolean && Type2 == UndertaleInstruction.DataType.Boolean)
-                        return String.Format("({0} {1}{1} {2})", Argument1.ToString(context), OperationToPrintableString(Opcode), Argument2.ToString(context));
+                        return String.Format("{0} {1}{1} {2}", arg1, OperationToPrintableString(Opcode), arg2);
                 }
-                return String.Format("({0} {1} {2})", Argument1.ToString(context), OperationToPrintableString(Opcode), Argument2.ToString(context));
+                return String.Format("{0} {1} {2}", arg1, OperationToPrintableString(Opcode), arg2);
+            }
+
+            public override string ToString(DecompileContext context)
+            {
+                return String.Format("({0})", ToStringNoParens(context));
             }
 
             internal override AssetIDType DoTypePropagation(DecompileContext context, AssetIDType suggestedType)
